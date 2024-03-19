@@ -1,10 +1,10 @@
 package fiberzap
 
 import (
-    "os"
-    "strconv"
-    "sync"
-    "time"
+	"os"
+	"strconv"
+	"sync"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"go.uber.org/zap"
@@ -177,10 +177,38 @@ func New(config ...Config) fiber.Handler {
 			}
 		}
 
-		ce.Write(fields...)
+		sortedFields := sortFields(fields, cfg)
+
+		ce.Write(sortedFields...)
 
 		return nil
 	}
+}
+
+func sortFields(fields []zap.Field, cfg Config) []zap.Field {
+	cfgFieldsMap := make(map[string]struct{})
+	for _, f := range cfg.Fields {
+		cfgFieldsMap[f] = struct{}{}
+	}
+
+	sortedFields := make([]zap.Field, 0, len(fields))
+
+	for _, field := range fields {
+		if _, inConfig := cfgFieldsMap[field.Key]; !inConfig {
+			sortedFields = append(sortedFields, field)
+		}
+	}
+
+	for _, cfgField := range cfg.Fields {
+		for _, field := range fields {
+			if cfgField == field.Key {
+				sortedFields = append(sortedFields, field)
+				break
+			}
+		}
+	}
+
+	return sortedFields
 }
 
 func contains(needle string, slice []string) bool {
